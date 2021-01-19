@@ -1,0 +1,5 @@
+---
+- name: 创建osd
+  script: "create_osd.sh {{ item }}"
+  with_items:
+    - "{{ devices }}"

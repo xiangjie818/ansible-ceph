@@ -1,0 +1,72 @@
+---
+- name: 确认dashboard是否已经启用
+  raw: "ceph mgr module ls | jq .enabled_modules"
+  register: mgr_stat
+
+- name: 启用dashboard
+  raw: "ceph mgr module enable dashboard"
+  when:
+    - "mon_host.split(',')[0] in ansible_all_ipv4_addresses and 'dashboard' not in mgr_stat"
+
+- name: 关闭ssl
+  raw: "ceph config set mgr mgr/dashboard/ssl false"
+  when:
+    - mon_host.split(',')[0] in ansible_all_ipv4_addresses
+
+- name: 配置dashboard
+  raw: "{{ item }}"
+  with_items:
+    - "ceph config set mgr mgr/dashboard/{{ node_name }}/server_addr {{ host_ip }}"
+    - "ceph config set mgr mgr/dashboard/{{ node_name }}/server_port {{ dashboard_port }}"
+
+- name: 重启ceph-mgr
+  systemd:
+    name: "ceph-mgr@{{ node_name }}"
+    state: restarted
+
+- name: 获取dashbaord用户列表
+  raw: "ceph dashboard ac-user-show"
+  register: ac_user
+
+- name: 配置dashboard账号密码
+  raw: "ceph dashboard ac-user-create {{ dashboard_user }} {{ dashboard_user_pass }} administrator"
+  when:
+    - mon_host.split(',')[0] in ansible_all_ipv4_addresses
+    - dashboard_user not in ac_user.stdout_lines | join()
+
+- name: 确认是否创建了dashboard连接用户
+  raw: "radosgw-admin user list | jq -M ."
+  register: user_list
+  when:
+    - mon_host.split(',')[0] in ansible_all_ipv4_addresses
+
+- name: 创建dashboard连接用户
+  raw: "radosgw-admin user create --uid={{ dashboard_rgw_user }} --display-name={{ dashboard_rgw_user }} --system"
+  register: user_dashboard
+  when:
+    - mon_host.split(',')[0] in ansible_all_ipv4_addresses
+    - dashboard_rgw_user not in user_list.stdout_lines | join()
+
+- name: 获取dashboard连接用户信息
+  raw: "radosgw-admin user info --uid={{ dashboard_rgw_user }} | jq -M .keys"
+  register: user_info
+  when:
+    - mon_host.split(',')[0] in ansible_all_ipv4_addresses
+    
+- name: 提取dashboard连接用户密钥
+  set_fact:
+    keys: "{{ user_info.stdout_lines | join() }}"
+  when:
+    - mon_host.split(',')[0] in ansible_all_ipv4_addresses
+
+- name: 启用dashbarod的rgw模块
+  raw: "{{ item }}"
+  with_items:
+    - "ceph dashboard set-rgw-api-access-key {{ keys[0].access_key }}"
+    - "ceph dashboard set-rgw-api-secret-key {{ keys[0].secret_key }}"
+    - "ceph dashboard set-rgw-api-ssl-verify false"
+    - "ceph dashboard set-rgw-api-user-id {{ dashboard_rgw_user }}"
+    - "ceph dashboard set-rgw-api-scheme http"
+    - "ceph dashboard set-rgw-api-port 8080"
+  when:
+    - mon_host.split(',')[0] in ansible_all_ipv4_addresses

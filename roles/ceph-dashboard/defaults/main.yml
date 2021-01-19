@@ -1,0 +1,5 @@
+---
+dashboard_user: admin
+dashboard_user_pass: 123456
+dashboard_port: 8443
+dashboard_rgw_user: ceph-dashboard

@@ -1,0 +1,11 @@
+[ceph_{{ ansible_architecture}}]
+name=ceph_{{ ansible_architecture }}
+baseurl=http://{{ mirrors }}/ceph/rpm-{{ ceph_version }}/el7/{{ ansible_architecture }}/
+enabled=1
+gpgcheck=0
+
+[ceph_noarch]
+name=ceph_noarch
+baseurl=http://{{ mirrors }}/ceph/rpm-{{ ceph_version }}/el7/noarch/
+enabled=1
+gpgcheck=0

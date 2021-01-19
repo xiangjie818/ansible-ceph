@@ -1,0 +1,12 @@
+---
+- name: 关闭防火墙
+  systemd:
+    name: firewalld
+    state: stopped
+    enabled: no
+
+- name: 清除防火墙规则
+  command: "{{ item }}"
+  with_items:
+    - iptables -F
+    - iptables -X

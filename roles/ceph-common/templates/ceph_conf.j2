@@ -1,0 +1,10 @@
+[global]
+fsid = {{ ansible_nodename | to_uuid }}
+
+mon initial members = {{ mon_initial_members.split(',')[0] }}
+
+mon host = {{ mon_host.split(',')[0] }}
+
+cluster network = {{ cluster_network }} 
+
+public network = {{ public_network }}

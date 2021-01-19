@@ -1,0 +1,36 @@
+---
+  - hosts: mons
+    gather_facts: true
+    become: True
+    
+    tasks:
+      - name: 停止服务
+        systemd: 
+          name: ceph-mon.target
+          state: stopped
+         
+      - name: 卸载rpm包
+        package:
+          name: "{{ item }}"
+          state: absent
+        with_items:
+          - ceph
+          - ceph-radosgw
+          - ceph-mgr-dashboard
+          - ceph-common
+          - ceph-grafana-dashboards
+          - python-cephfs
+          - libcephfs2
+          - python-ceph-argparse
+
+      - name: 删除目录和文件
+        file:
+          name: "{{ item }}"
+          state: absent
+        with_items:
+          - /var/lib/ceph
+          - /etc/ceph
+          - /tmp/ceph.mon.keyring
+          - /tmp/monmap
+          - /var/run/ceph/
+          - /run/ceph

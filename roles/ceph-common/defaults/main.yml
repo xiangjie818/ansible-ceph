@@ -1,0 +1,13 @@
+---
+ceph_packages:
+  - ceph
+  - ceph-radosgw
+  - ceph-mgr-dashboard
+  - vim
+  - gdisk
+  - jq
+
+host_ip: "{{ ansible_eth1['ipv4']['address'] }}"
+host_num: "{{ mon_host.split(',').index(host_ip) }}"
+node_name: "{{ mon_initial_members.split(',')[host_num | int()] }}"
+host_name: "{{ groups['mons'] | map ('extract',hostvars,['ansible_nodename']) | list }}"

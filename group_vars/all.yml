@@ -1,0 +1,10 @@
+ceph_version: nautilus
+mon_initial_members: node1,node2,node3
+mon_host: 192.168.31.230,192.168.31.231,192.168.31.232
+cluster_network: 192.168.31.0/24
+public_network: 192.168.31.0/24
+host_ip: "{{ ansible_eth1['ipv4']['address'] }}"
+devices:
+  - '/dev/vdb'
+  - '/dev/vdc'
+  - '/dev/vdd'

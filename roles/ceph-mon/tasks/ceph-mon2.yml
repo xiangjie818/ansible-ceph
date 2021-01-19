@@ -1,0 +1,34 @@
+---
+- name: 创建数据目录
+  file:
+    name: "/var/lib/ceph/mon/ceph-{{ node_name }}"
+    state: directory
+    owner: ceph
+  when:
+    - mon_host.split(',')[0] not in ansible_all_ipv4_addresses and done.stat.exists == False
+
+- name: 配置mon节点
+  raw: "{{ item }}"
+  with_items:
+    - "ceph mon getmap -o /tmp/ceph.mon.map"
+    - "sudo -u ceph ceph-mon --mkfs -i {{ node_name }} --monmap /tmp/ceph.mon.map --keyring /tmp/ceph.mon.keyring && if [ $? = 0 ] ; then sudo touch /var/lib/ceph/mon/ceph-{{ node_name }}/done ; fi"
+  when:
+    - mon_host.split(',')[0] not in ansible_all_ipv4_addresses and done.stat.exists == False
+
+- name: 启动mon节点
+  systemd:
+    name: "ceph-mon@{{ node_name }}"
+    state: started
+    enabled: yes
+  when:
+    - mon_host.split(',')[0] not in ansible_all_ipv4_addresses
+
+- name: 等待节点quorum
+  script: "ceph_quorum.py {{ node_name }}"
+  when:
+    - mon_host.split(',')[0] not in ansible_all_ipv4_addresses
+
+- name: 配置msgr2
+  raw: "ceph mon set-addrs {{ node_name }} [v2:{{ host_ip }}:3300,v1:{{ host_ip }}:6789]"
+  when:
+    - mon_host.split(',')[0] not in ansible_all_ipv4_addresses

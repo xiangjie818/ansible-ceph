@@ -1,0 +1,39 @@
+---
+  - hosts: mons
+    gather_facts: True
+    become: True
+    roles:
+      - prepare
+      - chrony
+      - ceph-common
+      - ceph-mon
+
+  - hosts: osds
+    gather_facts: True
+    become: True
+    roles:
+      - ceph-osd
+
+  - hosts: mgrs
+    gather_facts: True
+    become: True
+    roles:
+      - ceph-mgr
+
+  - hosts: rgws
+    gather_facts: True
+    become: True
+    roles:
+      - ceph-rgw
+
+  - hosts: mgrs
+    gather_facts: True
+    become: True
+    roles:
+      - ceph-dashboard
+
+  - hosts: prometheus
+    gather_facts: True
+    become: True
+    roles:
+      - prometheus

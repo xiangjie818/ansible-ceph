@@ -1,0 +1,41 @@
+---
+- name: 确认配置文件是否存在
+  stat:
+    path: "/etc/ceph/ceph.conf"
+  register: ceph_conf
+
+- name: 生成ceph.conf
+  template:
+    src: ceph_conf.j2
+    dest: /etc/ceph/ceph.conf
+  when:
+    - mon_host.split(',')[0] in ansible_all_ipv4_addresses and ceph_conf.stat.exists == False
+
+- name: 拉取配置文件
+  fetch:
+    src: "{{ item }}"
+    dest: "/tmp"
+  with_items:
+    - /etc/ceph/ceph.conf
+  when:
+    - mon_host.split(',')[0] in ansible_all_ipv4_addresses
+
+- name: 分发配置文件
+  copy:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: "{{ item.owner }}"
+  with_items:
+    - { src: "/tmp/{{ mon_host.split(',')[0] }}/etc/ceph/ceph.conf", dest: /etc/ceph/ceph.conf, owner: root }
+  when:
+    - ceph_conf.stat.exists == False
+
+- name: 获取fsid
+  raw: "cat /etc/ceph/ceph.conf | grep fsid | awk -F= '{print $2}'"
+  register: fsid
+
+- name: 设置全局变量
+  set_fact:
+    uuid: "{{ fsid.stdout_lines[0] }}"
+    node_name: "{{ node_name }}"
+    hostname: "{{ host_name }}"

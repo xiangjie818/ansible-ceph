@@ -1,0 +1,31 @@
+---
+- name: 确认keyring文件状态
+  stat:
+    path: "/var/lib/ceph/radosgw/ceph-{{ node_name }}/keyring"
+  register: keyring
+
+- name: 修改目录权限
+  file:
+    name: "{{ item}}"
+    state: directory
+    owner: ceph
+  with_items:
+    - "/var/lib/ceph/radosgw/"
+    - "/var/lib/ceph/radosgw/ceph-{{ node_name }}"
+  when:
+    - keyring.stat.exists == False
+
+- name: 配置rgw
+  raw: "{{ item }}"
+  with_items:
+    - "sudo ceph-authtool --create-keyring /var/lib/ceph/radosgw/ceph-{{ node_name }}/keyring -n client.rgw.{{ node_name }} --gen-key"
+    - "sudo ceph-authtool -n client.rgw.{{ node_name }} --cap osd 'allow rwx' --cap mon 'allow rwx' --cap mgr 'allow rwx' /var/lib/ceph/radosgw/ceph-{{ node_name }}/keyring"
+    - "sudo ceph -k /etc/ceph/ceph.client.admin.keyring auth add client.rgw.{{ node_name }} -i /var/lib/ceph/radosgw/ceph-{{ node_name }}/keyring"
+  when:
+    - keyring.stat.exists == False
+
+- name: 启动rgw
+  systemd:
+    name: "ceph-radosgw@rgw.{{ node_name }}"
+    state: started
+    enabled: yes

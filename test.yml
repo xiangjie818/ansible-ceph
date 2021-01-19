@@ -1,0 +1,49 @@
+---
+  - hosts: mons
+    gather_facts: true
+    become: True
+    vars:
+      uuid: "{{ ansible_nodename | to_uuid }}"
+
+    tasks:
+      - name: test
+        template:
+          src: prometheus.yml.j2
+          dest: /tmp/prometheus.yml
+#       - name: test03
+#         raw: "radosgw-admin user create --uid=ceph-dashboard --display-name=ceph-dashboard --system | jq -M '.keys'"
+#         register: user
+#         when:
+#           - mon_host.split(',')[0] in ansible_all_ipv4_addresses
+#
+#       - name: test04
+#         set_fact:
+#           keys: "{{ user.stdout_lines | join() }}"
+#         when:
+#           - mon_host.split(',')[0] in ansible_all_ipv4_addresses
+#
+#       - name: test00
+#         set_fact:
+#           access_key: "{{ keys[0].access_key }}"
+#           secret_key: "{{ keys[0].secret_key }}"
+#         when:
+#           - mon_host.split(',')[0] in ansible_all_ipv4_addresses
+#
+#       - name: test05
+#         debug:
+#           msg: "{{ access_key }}   {{ secret_key }}"
+#         when:
+#           - mon_host.split(',')[0] in ansible_all_ipv4_addresses
+#
+#       - name: 确认dashboard是否已经启用
+#         raw: "ceph mgr module ls | jq .enabled_modules"
+#         register: mgr_stat
+#
+#       - name: test05
+#         debug:
+#           msg: "{{ mgr_stat }}"
+#
+#       - name: 启用dashboard
+#         raw: "ceph mgr module enable dashboard"
+#         when:
+#           - "mon_host.split(',')[0] in ansible_all_ipv4_addresses and 'dashboard' not in mgr_stat"

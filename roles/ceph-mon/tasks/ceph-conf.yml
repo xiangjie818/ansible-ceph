@@ -1,0 +1,5 @@
+---
+- name: 修改ceph.conf
+  template:
+    src: ceph_conf.j2
+    dest: /etc/ceph/ceph.conf

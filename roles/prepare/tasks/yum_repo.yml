@@ -1,0 +1,10 @@
+---
+- name: 配置yum源
+  template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+  with_items:
+    - { src: os_x86_64_repo.j2, dest: /etc/yum.repos.d/os.repo }
+    - { src: ceph_x86_64_repo.j2, dest: /etc/yum.repos.d/ceph.repo }
+  when:
+    - mirrors is defined

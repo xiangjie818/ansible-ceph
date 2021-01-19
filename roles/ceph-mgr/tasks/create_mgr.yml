@@ -1,0 +1,27 @@
+---
+- name: 确认keyring文件是否存在
+  stat:
+    path: "/var/lib/ceph/mgr/ceph-{{ node_name }}/keyring"
+  register: keyring
+
+- name: 创建数据目录
+  file:
+    name: "/var/lib/ceph/mgr/ceph-{{ node_name }}/"
+    state: directory
+    owner: ceph
+  when:
+    - keyring.stat.exists == False
+
+- name: 配置mgr
+  raw: "{{ item }}"
+  with_items:
+    - "ceph auth get-or-create mgr.{{ node_name }} mon 'allow profile mgr' osd 'allow *' mds 'allow *'"
+    - "ceph auth get mgr.{{ node_name }} -o /var/lib/ceph/mgr/ceph-{{ node_name }}/keyring"
+  when:
+    - keyring.stat.exists == False
+
+- name: 启动mgr
+  systemd:
+    name: "ceph-mgr@{{ node_name }}"
+    state: started
+    enabled: yes

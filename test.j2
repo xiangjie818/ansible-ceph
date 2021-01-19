@@ -1,0 +1,63 @@
+mon host = {% for host in mon_host.split(',') -%}
+{% if host == mon_host.split(',')[0] %}
+[{{ "v2:" + host + ":3000,v1:" + host + ":6789"}}]
+{%- else -%}
+,[{{ "v2:" + host + ":3000,v1:" + host + ":6789"}}]
+{%- endif %}
+{%- endfor %}
+
+fsid={{ fsid.stdout_lines[0] }}
+
+{% if groups['rgws'] is defined %}
+{% for node in mon_initial_members.split(',') %}
+
+[{{ "client.rgw." + node }}]
+{{ "host=" + node }}
+{{ "keyring=/var/lib/ceph/radosgw/" + node + "/keyring" }}
+
+{% endfor %}
+{% endif %}
+
+rule_files:
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+    - targets: ['localhost:9090']
+  - job_name: 'ceph'
+    honor_labels: true
+    static_configs:
+{% for host in mon_host.split(',') %}
+      - targets: ['{{ host + ":9283"}}']
+        labels:
+          instance: 'ceph_cluster'
+{% endfor %}      
+
+
+{% for host in mon_host.split(',') %}
+      - targets: ['{{ host + ":9100"}}']
+        labels:
+          instance: "{{ ansible_nodename }}"
+
+
+      - targets: ['192.168.0.11:9283']
+        labels:
+          instance: 'ceph_cluster'
+      - targets: ['192.168.0.12:9283']
+        labels:
+          instance: 'ceph_cluster'
+      - targets: ['192.168.0.13:9283']
+        labels:
+          instance: 'ceph_cluster'
+  - job_name: 'node'
+    static_configs:
+      - targets: ['192.168.0.12:9100']
+        labels:
+          instance: "node2.zxj.com"
+      - targets: ['192.168.0.13:9100']
+        labels:
+          instance: "node3.zxj.com"
+  - job_name: 'grafana'
+    static_configs:
+      - targets: ['192.168.0.11:9100']
+        labels:
+          instance: "node1.zxj.com"

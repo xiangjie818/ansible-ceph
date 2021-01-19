@@ -1,0 +1,72 @@
+---
+- name: 确认是否已经安装mon
+  stat:
+    path: "/var/lib/ceph/mon/ceph-{{ node_name }}/done"
+  register: done
+
+- name: 创建数据目录
+  file:
+    name: "/var/lib/ceph/mon/ceph-{{ node_name }}"
+    state: directory
+    owner: ceph
+  when:
+    - mon_host.split(',')[0] in ansible_all_ipv4_addresses and done.stat.exists == False
+
+- name: 创建第一个mon节点
+  raw: "{{ item }}"
+  with_items:
+    - "ceph-authtool --create-keyring /tmp/ceph.mon.keyring --gen-key -n mon. --cap mon 'allow *'"
+    - "sudo ceph-authtool --create-keyring /etc/ceph/ceph.client.admin.keyring --gen-key -n client.admin --cap mon 'allow *' --cap osd 'allow *' --cap mds 'allow *' --cap mgr 'allow *'"
+    - "sudo ceph-authtool --create-keyring /var/lib/ceph/bootstrap-osd/ceph.keyring --gen-key -n client.bootstrap-osd --cap mon 'profile bootstrap-osd'"
+    - "sudo ceph-authtool /tmp/ceph.mon.keyring --import-keyring /etc/ceph/ceph.client.admin.keyring"
+    - "sudo ceph-authtool /tmp/ceph.mon.keyring --import-keyring /var/lib/ceph/bootstrap-osd/ceph.keyring"
+    - "monmaptool --create --add {{ node_name }} {{ mon_host.split(',')[0] }} --fsid {{ uuid }} /tmp/monmap"
+    - "chown ceph.ceph /tmp/ceph.mon.keyring"
+    - "sudo -u ceph ceph-mon --mkfs -i {{ node_name }} --monmap /tmp/monmap --keyring /tmp/ceph.mon.keyring"
+    - "sudo touch /var/lib/ceph/mon/ceph-{{ node_name }}/done"
+  when:
+    - mon_host.split(',')[0] in ansible_all_ipv4_addresses and done.stat.exists == False
+
+- name: 启动第一个mon节点
+  systemd:
+    name: "ceph-mon@{{ node_name }}"
+    state: started
+    enabled: yes
+  when:
+    - mon_host.split(',')[0] in ansible_all_ipv4_addresses
+
+- name: 等待节点quorum
+  script: "ceph_quorum.py {{ node_name }}"
+  when: 
+    - mon_host.split(',')[0] in ansible_all_ipv4_addresses
+  
+- name: 启用并设置msgr2
+  raw: "{{ item }}"
+  with_items:
+    - "ceph mon enable-msgr2"
+    - "ceph mon set-addrs {{ node_name }} [v2:{{ mon_host.split(',')[0] }}:3300,v1:{{ mon_host.split(',')[0] }}:6789]"
+  when:
+    - mon_host.split(',')[0] in ansible_all_ipv4_addresses
+
+- name: 拉取配置文件
+  fetch:
+    src: "{{ item }}"
+    dest: "/tmp"
+  with_items:
+    - /var/lib/ceph/bootstrap-osd/ceph.keyring
+    - /etc/ceph/ceph.client.admin.keyring
+    - /tmp/ceph.mon.keyring
+  when:
+    - mon_host.split(',')[0] in ansible_all_ipv4_addresses
+
+- name: 分发配置文件
+  copy:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: "{{ item.owner }}"
+  with_items:
+    - { src: "/tmp/{{ mon_host.split(',')[0] }}/var/lib/ceph/bootstrap-osd/ceph.keyring", dest: /var/lib/ceph/bootstrap-osd/ceph.keyring, owner: root }
+    - { src: "/tmp/{{ mon_host.split(',')[0] }}/etc/ceph/ceph.client.admin.keyring", dest: /etc/ceph/ceph.client.admin.keyring, owner: root }
+    - { src: "/tmp/{{ mon_host.split(',')[0] }}/tmp/ceph.mon.keyring", dest: /tmp/ceph.mon.keyring, owner: ceph }
+  when:
+    - mon_host.split(',')[0] not in ansible_all_ipv4_addresses and done.stat.exists == False

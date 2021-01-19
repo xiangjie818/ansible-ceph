@@ -1,0 +1,2 @@
+host_ip: "{{ ansible_enp0s3['ipv4']['address'] }}"
+node_name: "{{ mon_initial_members.split(',')[mon_host.split(',').index(host_ip)] }}"

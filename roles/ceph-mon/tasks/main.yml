@@ -1,0 +1,4 @@
+---
+- include_tasks: ceph-mon1.yml
+- include_tasks: ceph-mon2.yml
+- include_tasks: ceph-conf.yml

@@ -1,0 +1,29 @@
+{% if ansible_architecture == 'x86_64' %}
+{% set repo_url =  'http://' + mirrors + '/centos' %}
+{% endif %}
+{% if ansible_architecture == 'aarch64' %}
+{% set repo_url = 'http://' + mirrors + '/centos-altarch' %}
+{% endif %}
+[os]
+name=os
+baseurl={{ repo_url }}/7/os/{{ ansible_architecture }}/
+enabled=1
+gpgcheck=0
+
+[epel]
+name=epel
+baseurl=http://{{ mirrors }}/epel/7/{{ ansible_architecture }}/
+enabled=1
+gpgcheck=0
+
+[extras]
+name=extras
+baseurl={{ repo_url }}/7/extras/{{ ansible_architecture }}/
+enabled=1
+gpgcheck=0
+
+[updates]
+name=updates
+baseurl={{ repo_url }}/7/updates/{{ ansible_architecture }}/
+enabled=1
+gpgcheck=0

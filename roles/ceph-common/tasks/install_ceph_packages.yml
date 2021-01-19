@@ -1,0 +1,5 @@
+---
+- name: 安装ceph
+  package:
+    name: "{{ ceph_packages }}"
+    state: present
